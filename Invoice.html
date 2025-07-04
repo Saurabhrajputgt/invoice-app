@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proforma Invoice Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for product list */
+        #product-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        #product-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        #product-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        #product-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Print-specific styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #invoice-section, #invoice-section * {
+                visibility: visible;
+            }
+            #invoice-section {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">Proforma Invoice Generator</h1>
+            <p class="text-gray-600 mt-2">Search for products to add them to the invoice.</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+
+            <!-- Left Side: Product Selection -->
+            <div class="lg:w-1/3 bg-white p-6 rounded-2xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4">Select Products</h2>
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="Search by Product Name or SKU..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <svg class="w-5 h-5 absolute top-3.5 right-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                </div>
+                <div id="product-list" class="mt-4 max-h-96 overflow-y-auto pr-2">
+                    <!-- Product items will be injected here -->
+                </div>
+            </div>
+
+            <!-- Right Side: Invoice -->
+            <div class="lg:w-2/3">
+                <div id="invoice-section" class="bg-white p-8 rounded-2xl shadow-lg">
+                    <div class="flex justify-between items-start mb-8">
+                        <div>
+                            <h2 class="text-3xl font-bold text-gray-900">Proforma Invoice</h2>
+                            <p id="invoice-number" class="text-gray-500">INV-001</p>
+                        </div>
+                        <div class="text-right">
+                            <h3 class="text-xl font-semibold">Saksham</h3>
+                            <p class="text-gray-600">Your Company Address</p>
+                            <p class="text-gray-600">New Delhi, India</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Bill To:</h4>
+                            <textarea id="customer-details" class="w-full p-2 border border-gray-200 rounded-lg h-24" placeholder="Enter customer name and address..."></textarea>
+                        </div>
+                        <div class="text-right">
+                             <h4 class="font-semibold text-gray-700 mb-1">Date:</h4>
+                             <p id="invoice-date" class="text-gray-600"></p>
+                        </div>
+                    </div>
+
+                    <!-- Invoice Items Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                                    <th class="py-3 px-4 text-left">SKU</th>
+                                    <th class="py-3 px-4 text-left">Product Name</th>
+                                    <th class="py-3 px-4 text-center">Base Price</th>
+                                    <th class="py-3 px-4 text-center">GST</th>
+                                    <th class="py-3 px-4 text-center">Final Price</th>
+                                    <th class="py-3 px-4 text-center">Qty</th>
+                                    <th class="py-3 px-4 text-right">Total</th>
+                                    <th class="py-3 px-4 text-center no-print">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoice-items" class="text-gray-700 text-sm font-light">
+                                <!-- Invoice items will be injected here -->
+                                <tr id="no-items-row">
+                                    <td colspan="8" class="text-center py-10 text-gray-500">
+                                        No products added yet.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Invoice Total -->
+                    <div class="flex justify-end mt-8">
+                        <div class="w-full md:w-1/2 lg:w-1/3">
+                            <div class="flex justify-between py-2 border-b">
+                                <span class="font-medium">Subtotal</span>
+                                <span id="subtotal">₹0.00</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b">
+                                <span class="font-medium">Total GST</span>
+                                <span id="total-gst">₹0.00</span>
+                            </div>
+                            <div class="flex justify-between py-4 text-xl font-bold text-gray-900">
+                                <span>TOTAL</span>
+                                <span id="grand-total">₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="mt-12 text-center no-print">
+                        <button onclick="window.print()" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition shadow-md mr-4">
+                            Print / Save as PDF
+                        </button>
+                        <button onclick="resetInvoice()" class="bg-red-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-600 transition shadow-md">
+                            Reset Invoice
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA INITIALIZATION ---
+        // This data is the complete and corrected list from all 4 CSV files, including only 'Active' products.
+        const allProducts = [
+            // Orientation And Mobility
+            { "SKU": "SK-OM-001", "Product Name": "Smart Cane", "Base Price": 3500, "GST": 0.18, "Final Price": 4130 },
+            { "SKU": "SK-OM-002", "Product Name": "Folding Cane - Graphite", "Base Price": 1200, "GST": 0.05, "Final Price": 1260 },
+            { "SKU": "SK-OM-003", "Product Name": "White Cane - Aluminum", "Base Price": 500, "GST": 0.05, "Final Price": 525 },
+            { "SKU": "SK-OM-004", "Product Name": "GPS Navigator 'Way-finder'", "Base Price": 8000, "GST": 0.18, "Final Price": 9440 },
+            { "SKU": "SK-OM-005", "Product Name": "Ultrasonic Mobility Aid", "Base Price": 2500, "GST": 0.18, "Final Price": 2950 },
+            { "SKU": "SK-OM-006", "Product Name": "Tactile Paving Tiles (per sq. ft.)", "Base Price": 150, "GST": 0.12, "Final Price": 168 },
+            { "SKU": "SK-OM-007", "Product Name": "Cane Tip - Roller", "Base Price": 250, "GST": 0.05, "Final Price": 262.5 },
+            { "SKU": "SK-OM-008", "Product Name": "Cane Tip - Pencil", "Base Price": 150, "GST": 0.05, "Final Price": 157.5 },
+            { "SKU": "SK-OM-009", "Product Name": "Reflective Tape for Canes", "Base Price": 100, "GST": 0.05, "Final Price": 105 },
+            // Education and Employment
+            { "SKU": "SK-EE-001", "Product Name": "Braille Slate and Stylus", "Base Price": 250, "GST": 0, "Final Price": 250 },
+            { "SKU": "SK-EE-002", "Product Name": "Braille Paper (A4, 100 sheets)", "Base Price": 300, "GST": 0, "Final Price": 300 },
+            { "SKU": "SK-EE-003", "Product Name": "Braille Display 'Read-Easy'", "Base Price": 25000, "GST": 0.12, "Final Price": 28000 },
+            { "SKU": "SK-EE-004", "Product Name": "Screen Reader Software 'Voice-Up'", "Base Price": 7000, "GST": 0.18, "Final Price": 8260 },
+            { "SKU": "SK-EE-005", "Product Name": "Tactile Geometry Kit", "Base Price": 1500, "GST": 0.05, "Final Price": 1575 },
+            { "SKU": "SK-EE-006", "Product Name": "Abacus", "Base Price": 400, "GST": 0, "Final Price": 400 },
+            { "SKU": "SK-EE-007", "Product Name": "Digital Voice Recorder", "Base Price": 3000, "GST": 0.18, "Final Price": 3540 },
+            { "SKU": "SK-EE-008", "Product Name": "Braille Label Maker", "Base Price": 4500, "GST": 0.12, "Final Price": 5040 },
+            { "SKU": "SK-EE-009", "Product Name": "Magnifying Software 'Zoom-In'", "Base Price": 5000, "GST": 0.18, "Final Price": 5900 },
+            { "SKU": "SK-EE-010", "Product Name": "Talking Calculator", "Base Price": 800, "GST": 0.12, "Final Price": 896 },
+            // Daily Living
+            { "SKU": "SK-DL-001", "Product Name": "Talking Watch", "Base Price": 1200, "GST": 0.12, "Final Price": 1344 },
+            { "SKU": "SK-DL-002", "Product Name": "Braille Watch", "Base Price": 1800, "GST": 0.12, "Final Price": 2016 },
+            { "SKU": "SK-DL-003", "Product Name": "Liquid Level Indicator", "Base Price": 400, "GST": 0.05, "Final Price": 420 },
+            { "SKU": "SK-DL-004", "Product Name": "Talking Kitchen Scale", "Base Price": 2000, "GST": 0.18, "Final Price": 2360 },
+            { "SKU": "SK-DL-005", "Product Name": "Braille Playing Cards", "Base Price": 350, "GST": 0.05, "Final Price": 367.5 },
+            { "SKU": "SK-DL-006", "Product Name": "Needle Threader", "Base Price": 150, "GST": 0.05, "Final Price": 157.5 },
+            { "SKU": "SK-DL-007", "Product Name": "Tactile Measuring Cups", "Base Price": 600, "GST": 0.05, "Final Price": 630 },
+            { "SKU": "SK-DL-008", "Product Name": "Talking Blood Pressure Monitor", "Base Price": 2800, "GST": 0.12, "Final Price": 3136 },
+            { "SKU": "SK-DL-009", "Product Name": "Pill Organizer with Braille", "Base Price": 500, "GST": 0.05, "Final Price": 525 },
+            { "SKU": "SK-DL-011", "Product Name": "Signature Guide", "Base Price": 100, "GST": 0, "Final Price": 100 },
+            { "SKU": "SK-DL-012", "Product Name": "Talking Thermometer", "Base Price": 1500, "GST": 0.12, "Final Price": 1680 },
+            // Recreational Activities
+            { "SKU": "SK-RA-001", "Product Name": "Braille Chess Set", "Base Price": 1500, "GST": 0.12, "Final Price": 1680 },
+            { "SKU": "SK-RA-002", "Product Name": "Braille Scrabble", "Base Price": 2000, "GST": 0.12, "Final Price": 2240 },
+            { "SKU": "SK-RA-003", "Product Name": "Audio Described Movies (Pen Drive)", "Base Price": 500, "GST": 0.18, "Final Price": 590 },
+            { "SKU": "SK-RA-004", "Product Name": "Ball with Bells", "Base Price": 300, "GST": 0.05, "Final Price": 315 },
+            { "SKU": "SK-RA-005", "Product Name": "Tandem Bicycle", "Base Price": 15000, "GST": 0.12, "Final Price": 16800 },
+            { "SKU": "SK-RA-006", "Product Name": "Uno Cards - Braille", "Base Price": 450, "GST": 0.05, "Final Price": 472.5 }
+        ];
+
+        let invoiceItems = [];
+        let invoiceCounter = 1;
+
+        // --- DOM ELEMENTS ---
+        const searchInput = document.getElementById('search-input');
+        const productListContainer = document.getElementById('product-list');
+        const invoiceItemsContainer = document.getElementById('invoice-items');
+        const noItemsRow = document.getElementById('no-items-row');
+        const subtotalEl = document.getElementById('subtotal');
+        const totalGstEl = document.getElementById('total-gst');
+        const grandTotalEl = document.getElementById('grand-total');
+        const invoiceNumberEl = document.getElementById('invoice-number');
+
+        // --- FUNCTIONS ---
+
+        /**
+         * Formats a number into Indian Rupee currency format.
+         * @param {number} amount - The number to format.
+         * @returns {string} - The formatted currency string.
+         */
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+            }).format(amount);
+        };
+
+        /**
+         * Renders the list of products based on the search query.
+         * @param {string} query - The search term.
+         */
+        const renderProductList = (query = '') => {
+            productListContainer.innerHTML = '';
+            const lowerCaseQuery = query.toLowerCase();
+
+            const filteredProducts = allProducts.filter(p =>
+                p['Product Name'].toLowerCase().includes(lowerCaseQuery) ||
+                p.SKU.toLowerCase().includes(lowerCaseQuery)
+            );
+
+            if (filteredProducts.length === 0) {
+                productListContainer.innerHTML = `<p class="text-gray-500 p-4">No products found.</p>`;
+                return;
+            }
+
+            filteredProducts.forEach(product => {
+                const isAdded = invoiceItems.some(item => item.SKU === product.SKU);
+                const productEl = document.createElement('div');
+                productEl.className = 'flex justify-between items-center p-3 hover:bg-gray-100 rounded-lg cursor-pointer';
+                productEl.setAttribute('onclick', `addProductToInvoice('${product.SKU}')`);
+                productEl.innerHTML = `
+                    <div>
+                        <p class="font-semibold">${product['Product Name']}</p>
+                        <p class="text-sm text-gray-500">${product.SKU} - ${formatCurrency(product['Final Price'])}</p>
+                    </div>
+                    <button 
+                        class="add-btn text-sm font-semibold py-1 px-3 rounded-full transition ${isAdded ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}"
+                        ${isAdded ? 'disabled' : ''}
+                    >
+                        ${isAdded ? 'Added' : 'Add'}
+                    </button>
+                `;
+                productListContainer.appendChild(productEl);
+            });
+        };
+
+        /**
+         * Renders all items currently in the invoice.
+         */
+        const renderInvoiceItems = () => {
+            invoiceItemsContainer.innerHTML = '';
+            if (invoiceItems.length === 0) {
+                noItemsRow.style.display = 'table-row';
+            } else {
+                noItemsRow.style.display = 'none';
+                invoiceItems.forEach((item, index) => {
+                    const itemRow = document.createElement('tr');
+                    itemRow.className = 'border-b border-gray-200 hover:bg-gray-50';
+                    const lineTotal = item['Final Price'] * item.quantity;
+                    itemRow.innerHTML = `
+                        <td class="py-3 px-4">${item.SKU}</td>
+                        <td class="py-3 px-4">${item['Product Name']}</td>
+                        <td class="py-3 px-4 text-center">${formatCurrency(item['Base Price'])}</td>
+                        <td class="py-3 px-4 text-center">${(item.GST * 100).toFixed(0)}%</td>
+                        <td class="py-3 px-4 text-center">${formatCurrency(item['Final Price'])}</td>
+                        <td class="py-3 px-4 text-center">
+                            <input type="number" min="1" value="${item.quantity}" onchange="updateQuantity('${item.SKU}', this.value)" class="w-16 text-center border rounded-md p-1 no-print">
+                            <span class="print-only">${item.quantity}</span>
+                        </td>
+                        <td class="py-3 px-4 text-right">${formatCurrency(lineTotal)}</td>
+                        <td class="py-3 px-4 text-center no-print">
+                            <button onclick="removeProductFromInvoice('${item.SKU}')" class="bg-red-100 text-red-600 p-2 rounded-full hover:bg-red-200 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    `;
+                    invoiceItemsContainer.appendChild(itemRow);
+                });
+            }
+            updateTotals();
+            renderProductList(searchInput.value); // Re-render product list to update 'Add' buttons
+        };
+        
+        /**
+         * Calculates and displays the subtotal, total GST, and grand total.
+         */
+        const updateTotals = () => {
+            const subtotal = invoiceItems.reduce((sum, item) => sum + (item['Base Price'] * item.quantity), 0);
+            const grandTotal = invoiceItems.reduce((sum, item) => sum + (item['Final Price'] * item.quantity), 0);
+            const totalGst = grandTotal - subtotal;
+
+            subtotalEl.textContent = formatCurrency(subtotal);
+            totalGstEl.textContent = formatCurrency(totalGst);
+            grandTotalEl.textContent = formatCurrency(grandTotal);
+        };
+
+        /**
+         * Adds a product to the invoice list.
+         * @param {string} sku - The SKU of the product to add.
+         */
+        const addProductToInvoice = (sku) => {
+            const productToAdd = allProducts.find(p => p.SKU === sku);
+            if (productToAdd && !invoiceItems.some(item => item.SKU === sku)) {
+                invoiceItems.push({ ...productToAdd, quantity: 1 });
+                renderInvoiceItems();
+            }
+        };
+
+        /**
+         * Removes a product from the invoice list.
+         * @param {string} sku - The SKU of the product to remove.
+         */
+        const removeProductFromInvoice = (sku) => {
+            invoiceItems = invoiceItems.filter(item => item.SKU !== sku);
+            renderInvoiceItems();
+        };
+        
+        /**
+         * Updates the quantity of an item in the invoice.
+         * @param {string} sku - The SKU of the item to update.
+         * @param {string} newQuantity - The new quantity value.
+         */
+        const updateQuantity = (sku, newQuantity) => {
+            const quantity = parseInt(newQuantity, 10);
+            if (quantity > 0) {
+                const item = invoiceItems.find(i => i.SKU === sku);
+                if (item) {
+                    item.quantity = quantity;
+                    renderInvoiceItems();
+                }
+            } else { // If user enters 0 or less, reset to 1
+                const item = invoiceItems.find(i => i.SKU === sku);
+                if(item) {
+                    item.quantity = 1;
+                    renderInvoiceItems();
+                }
+            }
+        };
+
+        /**
+         * Resets the entire invoice to its initial state.
+         */
+        const resetInvoice = () => {
+            if (confirm('Are you sure you want to clear the entire invoice and start a new one?')) {
+                invoiceItems = [];
+                document.getElementById('customer-details').value = '';
+                invoiceCounter++;
+                invoiceNumberEl.textContent = `INV-${String(invoiceCounter).padStart(3, '0')}`;
+                renderInvoiceItems();
+            }
+        };
+
+        // --- EVENT LISTENERS & INITIALIZATION ---
+        
+        // Set invoice date to today
+        document.getElementById('invoice-date').textContent = new Date().toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        });
+
+        // Set initial invoice number
+        invoiceNumberEl.textContent = `INV-${String(invoiceCounter).padStart(3, '0')}`;
+
+        // Listen for input on the search bar
+        searchInput.addEventListener('keyup', (e) => {
+            renderProductList(e.target.value);
+        });
+
+        // Initial render on page load
+        window.onload = () => {
+            renderProductList();
+            renderInvoiceItems();
+        };
+
+    </script>
+</body>
+</html>
